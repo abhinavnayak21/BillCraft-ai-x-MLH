@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-cream: #F4F0E8;
+    --header-green: #1E3F30;
+    --accent-coral: #FF8577;
+    --border-dark: #111111;
+  }
+
+  body {
+    background-color: var(--bg-cream);
+    color: #111111;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Custom Neobrutalist / Retro Utility Classes */
+.brutal-border {
+  border: 2px solid #111111;
+}
+
+.brutal-border-sm {
+  border: 1.5px solid #111111;
+}
+
+.brutal-shadow {
+  box-shadow: 4px 4px 0px #111111;
+}
+
+.brutal-shadow-sm {
+  box-shadow: 2.5px 2.5px 0px #111111;
+}
+
+.brutal-shadow-hover:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #111111;
+}
+
+.brutal-shadow-hover:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #111111;
+}
+
+/* Custom styled inputs */
+.brutal-input {
+  border: 2px solid #111111;
+  background-color: #FFFFFF;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #111111;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.brutal-input:focus {
+  background-color: #FFFDF7;
+  box-shadow: 3px 3px 0px #111111;
+}
+
+/* Header styled logo text like Hacktoberfest */
+.logo-font {
+  font-family: 'Arial Black', Impact, sans-serif;
+  letter-spacing: -0.03em;
+}
