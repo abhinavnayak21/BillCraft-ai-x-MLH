@@ -1,18 +1,7 @@
-# 🧾 InvoiceCraft AI
+# 🧾 BillCraft AI
 
 > **AI-powered invoice generator & reader built for freelancers and small businesses.**  
 > Powered by local **Ollama (Qwen)** for automated invoice data extraction and line-item enhancement, with strict server-side Python math validation and branded PDF export.
-
----
-
-## 🎨 Visual Aesthetics & Design
-
-Built directly inspired by the retro-neobrutalist / Hacktoberfest aesthetic:
-- **Canvas / Background:** Retro warm cream (`#F4F0E8` / `#EFECE6`).
-- **Header:** Deep forest green (`#1E3F30`) with crisp high-contrast branding.
-- **Accents:** Coral/salmon action buttons (`#FF8577`) with hard offset black shadows (`4px 4px 0 #000`).
-- **Pill Badges:** Pastel blue (`#D1E8FA`) and pastel salmon (`#FFD5CE`) with 2px borders.
-- **Invoice Cards:** Date badge box on the left (`14 OCT`), clean bold typography, and interactive hover micro-animations.
 
 ---
 
@@ -22,14 +11,15 @@ Built directly inspired by the retro-neobrutalist / Hacktoberfest aesthetic:
    - Persistent inline business profile (`Company Name`, `Email`, `Tax Rate %`, `Payment Terms`) saved automatically in your browser's `localStorage`.
    - Dynamic line items with auto-calculated subtotals, tax, and grand totals.
    - **✨ AI Item Description:** One-click enhancement of product/service descriptions using local Ollama.
-   - **High-Resolution PDF Generation:** Download professional branded PDF invoices matching the retro design theme.
+   - **High-Resolution PDF Generation:** Download professional branded PDF invoices matching the theme.
 
 2. **Invoice Reader (OCR + Local AI):**
    - **Quick Drag & Drop:** Drop any PDF document, scanned receipt, PNG, or JPG invoice.
-   - **Document OCR:** Uses `PyMuPDF` for fast vector PDF text extraction and `Tesseract` for scanned images.
-   - **Local Ollama Extraction:** Sends raw text to your local **Qwen** model to extract vendor, client, dates, line items, and totals into structured JSON.
-   - **Graceful Offline Fallback:** If Ollama is offline or unavailable, automatically falls back to an intelligent regex parser so extraction always works.
-   - **1-Click Import:** Immediately transfer extracted details into the Generator for editing or saving.
+   - **Document OCR:** Uses `RapidOCR` and `PyMuPDF` for fast vector and scanned document text extraction.
+   - **Local Ollama Extraction:** Sends text to your local **Qwen** model (`qwen2.5:7b`) to extract vendor, client, dates, line items, and totals into structured JSON.
+   - **Graceful Fallback:** If Ollama is offline, automatically falls back to an intelligent rule-based parser so extraction always works.
+   - **Auto-Save to Database:** Extracted invoices are automatically verified and saved into SQLite.
+   - **1-Click Import:** Immediately transfer extracted details into the Generator for editing or downloading PDF.
 
 3. **Financial Math Validation:**
    - Python-side calculation service guarantees accurate rounding, subtotaling, tax computation, and grand totals before any record is saved to SQLite.
@@ -40,8 +30,8 @@ Built directly inspired by the retro-neobrutalist / Hacktoberfest aesthetic:
 
 - **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, pnpm
 - **Backend:** Python 3, FastAPI, SQLite, SQLAlchemy, Pydantic, ReportLab
-- **OCR & Document Processing:** PyMuPDF (`fitz`), Pillow, Tesseract OCR
-- **Local AI:** Ollama with open-weight models (`qwen2.5:latest` or `qwen2.5:7b`)
+- **OCR & Document Processing:** RapidOCR, PyMuPDF (`fitz`), Pillow
+- **Local AI:** Ollama (`qwen2.5:7b`)
 
 ---
 
@@ -50,9 +40,9 @@ Built directly inspired by the retro-neobrutalist / Hacktoberfest aesthetic:
 ### 1. Prerequisites
 - **Python 3.10+**
 - **Node.js 18+** & **pnpm** (`npm install -g pnpm`)
-- *(Optional)* **Ollama** running locally:
+- **Ollama** running locally with Qwen:
   ```bash
-  ollama run qwen2.5
+  ollama run qwen2.5:7b
   ```
 
 ---
@@ -98,17 +88,6 @@ pnpm dev
 ```
 
 Open your browser at **http://127.0.0.1:5173/**.
-
----
-
-## 🧪 Automated Tests
-
-Run backend math validation and PDF generation tests:
-
-```bash
-cd backend
-.\venv\Scripts\pytest test_backend.py -v
-```
 
 ---
 
