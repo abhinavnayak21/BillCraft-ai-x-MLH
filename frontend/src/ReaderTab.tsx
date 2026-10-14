@@ -216,7 +216,7 @@ export const ReaderTab: React.FC<ReaderTabProps> = ({ onImportToGenerator, onInv
               {extractionResult.ai_used ? (
                 <span className="bg-[#D1E8FA] text-blue-900 px-2 py-0.5 text-xs font-bold uppercase brutal-border-sm flex items-center space-x-1">
                   <Cpu size={12} />
-                  <span>Ollama ({extractionResult.model || 'qwen2.5:7b'})</span>
+                  <span>{extractionResult.model?.includes('Cloudflare') ? extractionResult.model : `Ollama (${extractionResult.model || 'qwen2.5:7b'})`}</span>
                 </span>
               ) : (
                 <span className="bg-[#FFF2DE] text-amber-900 px-2 py-0.5 text-xs font-bold uppercase brutal-border-sm">

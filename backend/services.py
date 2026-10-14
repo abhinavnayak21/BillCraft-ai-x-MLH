@@ -10,6 +10,9 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+CF_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+CF_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+CF_MODEL = os.environ.get("CF_MODEL", "@cf/qwen/qwen2.5-7b-instruct")
 
 # -------------------------------------------------------------
 # 1. Precise Python Math Calculation & Validation
@@ -402,8 +405,22 @@ def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
 # -------------------------------------------------------------
 async def check_ollama_status() -> Dict[str, Any]:
     """
-    Checks if local Ollama is running and which models are available.
+    Checks AI provider status:
+    1. Cloudflare Workers AI (if CLOUDFLARE_API_TOKEN & CLOUDFLARE_ACCOUNT_ID are configured)
+    2. Local Ollama (if running on OLLAMA_BASE_URL)
     """
+    cf_token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+    cf_account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+    cf_model = os.environ.get("CF_MODEL", "@cf/qwen/qwen2.5-7b-instruct")
+
+    if cf_token and cf_account:
+        return {
+            "online": True,
+            "provider": "cloudflare",
+            "models": [cf_model],
+            "active_model": cf_model
+        }
+
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
             resp = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
@@ -667,7 +684,67 @@ Invoice Document Text:
 \"\"\"
 """
 
-    # Local Ollama Qwen Call
+    provider = ollama_info.get("provider", "ollama")
+
+    # 1. Cloudflare Workers AI Call
+    if provider == "cloudflare":
+        cf_token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+        cf_account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+        cf_model = os.environ.get("CF_MODEL", "@cf/qwen/qwen2.5-7b-instruct")
+        try:
+            url = f"https://api.cloudflare.com/client/v4/accounts/{cf_account}/ai/run/{cf_model}"
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {cf_token}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "messages": [
+                            {"role": "system", "content": "You are an expert invoice data extraction assistant. Return ONLY a valid JSON object matching the requested schema. No conversation, no markdown codeblocks."},
+                            {"role": "user", "content": prompt}
+                        ]
+                    }
+                )
+
+                if resp.status_code == 200:
+                    data = resp.json()
+                    result = data.get("result", {}).get("response", "")
+                    clean_json = re.sub(r'```json\s*', '', result)
+                    clean_json = re.sub(r'```\s*', '', clean_json).strip()
+                    
+                    json_match = re.search(r'\{.*\}', clean_json, re.DOTALL)
+                    if json_match:
+                        clean_json = json_match.group(0)
+
+                    parsed_data = json.loads(clean_json)
+
+                    if "currency" not in parsed_data:
+                        parsed_data["currency"] = "₹" if any(k in raw_text.lower() for k in ["rs", "rupee", "pan no", "mumbai", "pvt"]) else "$"
+
+                    calc = calculate_invoice_totals(
+                        parsed_data.get("items", []),
+                        parsed_data.get("tax_rate", 0.0)
+                    )
+                    
+                    stated_total = parsed_data.get("total")
+                    parsed_data.update(calc)
+                    if stated_total and abs(stated_total - calc["total"]) > 0.5:
+                        parsed_data["stated_total"] = stated_total
+
+                    return {
+                        "success": True,
+                        "ai_used": True,
+                        "model": f"Cloudflare ({cf_model.split('/')[-1]})",
+                        "message": f"Successfully extracted all {len(calc['items'])} points with Cloudflare Workers AI ({cf_model})",
+                        "data": parsed_data,
+                        "raw_text_snippet": raw_text[:800]
+                    }
+        except Exception as e:
+            print(f"[Cloudflare Workers AI Call Exception]: {type(e).__name__} -> {repr(e)}")
+
+    # 2. Local Ollama Qwen Call
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(
@@ -736,7 +813,7 @@ Invoice Document Text:
 # -------------------------------------------------------------
 async def generate_item_description(title: str) -> str:
     """
-    Uses local Ollama to write a concise professional line item description.
+    Uses Cloudflare Workers AI or local Ollama to write a concise line item description.
     """
     ollama_info = await check_ollama_status()
     if not ollama_info["online"]:
@@ -745,6 +822,25 @@ async def generate_item_description(title: str) -> str:
     model = ollama_info["active_model"]
     prompt = f"Write a single concise, professional invoice line item description (under 15 words) for: '{title}'. Return ONLY the description, nothing else."
 
+    # Cloudflare Workers AI
+    if ollama_info.get("provider") == "cloudflare":
+        cf_token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+        cf_account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+        cf_model = os.environ.get("CF_MODEL", "@cf/qwen/qwen2.5-7b-instruct")
+        try:
+            url = f"https://api.cloudflare.com/client/v4/accounts/{cf_account}/ai/run/{cf_model}"
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {cf_token}"},
+                    json={"messages": [{"role": "user", "content": prompt}]}
+                )
+                if resp.status_code == 200:
+                    return resp.json().get("result", {}).get("response", "").strip().strip('"').strip("'")
+        except Exception:
+            pass
+
+    # Local Ollama
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(
